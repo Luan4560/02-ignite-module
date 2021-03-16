@@ -1,32 +1,68 @@
-import { useEffect } from 'react'
-import { createServer } from 'miragejs'
-import { Container } from './styles'
+import { useEffect, useState } from 'react'
+import { createServer, Model } from 'miragejs'
 import { api } from '../../services/api';
 
+import { Container } from './styles'
+
 createServer({
+  models: {
+    transaction: Model,
+  },
+
+  seeds(server) {
+    server.db.loadData({
+      transactions: [
+        {
+          id: 1,
+          title: 'Freelancer website',
+          type: 'deposit',
+          category: 'Dev',
+          amount: 6000,
+          createdAt: new Date('2021-04-16 09:00:00')
+        },
+        {
+          id: 2,
+          title: 'Tax Rent',
+          type: 'withdraw',
+          category: 'House',
+          amount: 1100,
+          createdAt: new Date('2021-04-15 11:00:00')
+        }
+      ]
+    })
+  },
+
   routes() {
     this.namespace = 'api';
 
     this.get('/transactions', () => {
-      return [
-        {
-          id: 1,
-          title: 'Transaction 1',
-          amount: 400,
-          type: 'deposit',
-          category: 'Food',
-          createdAt: new Date()
-        }
-      ]
+      return this.schema.all('transaction')
+    })
+
+    this.post('/transactions', (schema, request) => {
+      const data = JSON.parse(request.requestBody)
+
+      return schema.create('transaction', data)
     })
   }
 })
 
+interface Transaction {
+  id: number;
+  title: string;
+  amount: number;
+  type: string;
+  category: string;
+  createdAt: string;
+}
+
 export function TransactionsTable() {
+  const [transactions, setTransactions] = useState<Transaction[]>([])
+
 
   useEffect(() => {
     api.get('transactions')
-    .then(response => console.log(response.data))
+    .then(response => setTransactions(response.data.transactions))
   }, []);
 
   return (
@@ -42,20 +78,23 @@ export function TransactionsTable() {
         </thead>
 
         <tbody>
-          <tr>
-            <td>Site development</td>
-            <td className="deposit">R$12.000</td>
-            <td>Development</td>
-            <td>05/04/2021</td>
-          </tr>
-
-          <tr>
-            <td>Tax rent</td>
-            <td className="withdraw">- R$1.100</td>
-            <td>House</td>
-            <td>15/04/2021</td>
-          </tr>
-
+          {transactions.map(transaction => (
+            <tr key={transaction.id}>
+              <td>{transaction.title}</td>
+              <td className={transaction.type}>
+               {new Intl.NumberFormat('pt-BR', {
+                 style: 'currency',
+                 currency: 'BRL'
+               }).format(transaction.amount)}
+              </td>
+              <td>{transaction.category}</td>
+              <td>
+              {new Intl.DateTimeFormat('pt-BR').format(
+                new Date(transaction.createdAt)
+              )}
+              </td>
+            </tr>
+          ))}
         </tbody>
       </table>
     </Container>
